@@ -136,7 +136,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if 'efficientnet' in args.arch:  # NEW
         if args.pretrained:
-            model = EfficientNet.from_pretrained(args.arch, advprop=args.advprop)
+            model = EfficientNet.from_pretrained(args.arch, advprop=args.advprop, num_classes=3)
             print("=> using pre-trained model '{}'".format(args.arch))
         else:
             print("=> creating model '{}'".format(args.arch))
@@ -206,8 +206,8 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
-    traindir = os.path.join(args.data, 'train')
-    valdir = os.path.join(args.data, 'val')
+    train_dir = os.path.join(args.data, 'train')
+    test_dir = os.path.join(args.data, 'test')
     if args.advprop:
         normalize = transforms.Lambda(lambda img: img * 2.0 - 1.0)
     else:
@@ -215,7 +215,7 @@ def main_worker(gpu, ngpus_per_node, args):
                                          std=[0.229, 0.224, 0.225])
 
     train_dataset = datasets.ImageFolder(
-        traindir,
+        train_dir,
         transforms.Compose([
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
@@ -234,7 +234,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if 'efficientnet' in args.arch:
         image_size = EfficientNet.get_image_size(args.arch)
-        val_transforms = transforms.Compose([
+        test_transforms = transforms.Compose([
             transforms.Resize(image_size, interpolation=PIL.Image.BICUBIC),
             transforms.CenterCrop(image_size),
             transforms.ToTensor(),
@@ -242,7 +242,7 @@ def main_worker(gpu, ngpus_per_node, args):
         ])
         print('Using image size', image_size)
     else:
-        val_transforms = transforms.Compose([
+        test_transforms = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
@@ -251,7 +251,7 @@ def main_worker(gpu, ngpus_per_node, args):
         print('Using image size', 224)
 
     val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, val_transforms),
+        datasets.ImageFolder(test_dir, test_transforms),
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
